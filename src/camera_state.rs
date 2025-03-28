@@ -12,9 +12,12 @@ pub struct CameraState {
     // radians in the XZ plane
     heading: f64,
     steer: f64, // radial velocity
+    roll: f64, // roll angle in radians
+    roll_rate: f64, // roll angular velocity
     max_velocity: f64,
     velocity_step: f64,
     steering_step: f64,
+    roll_step: f64,
 }
 
 impl CameraState {
@@ -28,9 +31,12 @@ impl CameraState {
             velocity: 0.0,
             heading: 0.0, // 0 radians means facing positive Z axis
             steer: 0.0, // radial velocity
+            roll: 0.0, // 0 radians means no roll
+            roll_rate: 0.0, // roll angular velocity
             max_velocity: 0.2,
-            velocity_step: 0.01,
+            velocity_step: 0.05,
             steering_step: 0.01,
+            roll_step: 0.01,
         }
     }
 
@@ -50,6 +56,7 @@ impl CameraState {
     pub fn stop(&mut self) {
         self.velocity = 0.0;
         self.steer = 0.0;
+        self.roll_rate = 0.0;
     }
 
     /// Steers left (counterclockwise in XZ plane) by the specified factor
@@ -66,9 +73,24 @@ impl CameraState {
         self.steer = self.steer.clamp(-0.3, 0.3);
     }
 
+    /// Roll counterclockwise (Q key) by the specified factor
+    pub fn roll_counterclockwise(&mut self, step_factor: f64) {
+        let step = step_factor * self.roll_step;
+        self.roll_rate -= step;
+        self.roll_rate = self.roll_rate.clamp(-0.3, 0.3);
+    }
+
+    /// Roll clockwise (E key) by the specified factor
+    pub fn roll_clockwise(&mut self, step_factor: f64) {
+        let step = step_factor * self.roll_step;
+        self.roll_rate += step;
+        self.roll_rate = self.roll_rate.clamp(-0.3, 0.3);
+    }
+
     /// Updates the camera position based on current velocity and direction
     pub fn update(&mut self) {
         self.heading += self.steer;
+        self.roll += self.roll_rate;
 
         // loop heading around 2pi
         if self.heading > 2.0 * PI {
@@ -76,6 +98,14 @@ impl CameraState {
         }
         if self.heading < 0.0 {
             self.heading += 2.0 * PI;
+        }
+
+        // loop roll around 2pi
+        if self.roll > 2.0 * PI {
+            self.roll -= 2.0 * PI;
+        }
+        if self.roll < 0.0 {
+            self.roll += 2.0 * PI;
         }
 
         if self.velocity.abs() > 1e-6 {
@@ -93,16 +123,34 @@ impl CameraState {
             self.velocity *= 0.8;
         }
 
-        // Calculate rotation to look in direction of travel
-        let heading = self.heading;
+        // Apply damping to steering rate and roll rate
+        self.steer *= 0.8;
+        self.roll_rate *= 0.8;
+
+        // Create quaternion from heading (y-axis rotation) and roll (z-axis rotation)
+        // First calculate quaternion components for heading (y-axis rotation)
+        let half_heading = self.heading / 2.0;
+        let qy_w = half_heading.cos();
+        let qy_x = 0.0;
+        let qy_y = half_heading.sin();
+        let qy_z = 0.0;
         
-        // Create quaternion for rotation around Y axis (for horizontal turning)
-        // When heading is 0, the camera looks in the +Z direction
-        let qw = (heading / 2.0).cos();
-        let qy = (heading / 2.0).sin();
+        // Calculate quaternion components for roll (z-axis rotation)
+        let half_roll = self.roll / 2.0;
+        let qz_w = half_roll.cos();
+        let qz_x = 0.0;
+        let qz_y = 0.0;
+        let qz_z = half_roll.sin();
+        
+        // Multiply quaternions to combine rotations (heading * roll)
+        // (w1, x1, y1, z1) * (w2, x2, y2, z2)
+        let w = qy_w * qz_w - qy_x * qz_x - qy_y * qz_y - qy_z * qz_z;
+        let x = qy_w * qz_x + qz_w * qy_x + qy_y * qz_z - qy_z * qz_y;
+        let y = qy_w * qz_y + qz_w * qy_y + qy_z * qz_x - qy_x * qz_z;
+        let z = qy_w * qz_z + qz_w * qy_z + qy_x * qz_y - qy_y * qz_x;
         
         // Set rotation quaternion [x, y, z, w]
-        self.rotation = vec![0.0, qy, 0.0, qw];
+        self.rotation = vec![x, y, z, w];
     }
 
     /// Gets the current velocity
@@ -118,6 +166,11 @@ impl CameraState {
     /// Gets the current translation vector
     pub fn get_translation(&self) -> &Vec<f64> {
         &self.translation
+    }
+
+    /// Gets the current roll angle in radians
+    pub fn get_roll(&self) -> f64 {
+        self.roll
     }
 
     /// Logs the current camera state (calibration, image, and transform)
