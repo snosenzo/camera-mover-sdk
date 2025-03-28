@@ -227,6 +227,7 @@ dependencies = [
  "foxglove",
  "futures",
  "keyboard-types",
+ "mcap 0.14.1",
  "parking_lot",
  "schemars",
  "serde",
@@ -531,7 +532,7 @@ dependencies = [
  "delegate",
  "flume",
  "futures-util",
- "mcap",
+ "mcap 0.15.1",
  "parking_lot",
  "prost",
  "prost-types",
@@ -909,6 +910,26 @@ checksum = "6bd8c0d6c6ed0cd30b3652886bb8711dc4bb01d637a68105a3d5158039b418e6"
 dependencies = [
  "cc",
  "libc",
+]
+
+[[package]]
+name = "mcap"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fcadec48bb9fafa74ef722a5fee3e7d15dc536a590f3c4d0a4ce55a6f679c80"
+dependencies = [
+ "bimap",
+ "binrw",
+ "byteorder",
+ "crc32fast",
+ "enumset",
+ "log",
+ "lz4",
+ "num_cpus",
+ "paste",
+ "static_assertions",
+ "thiserror 1.0.69",
+ "zstd",
 ]
 
 [[package]]
