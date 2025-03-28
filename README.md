@@ -23,7 +23,7 @@ The camera is controlled by typing into the terminal where the server was starte
  - D -> look right
  - Q -> roll cam counter-clockwise
  - E -> roll cam clockwise
- - <Spacebar> -> stop movement
+ - `<Spacebar>` -> stop movement
  - Ctrl-C -> quit
 
 ## How this was accomplished:
